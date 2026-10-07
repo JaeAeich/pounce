@@ -1,0 +1,7 @@
+.build/
+result*
+.swiftpm/
+dist/
+nohup.out
+.DS_Store
+node_modules/
