@@ -1,0 +1,41 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "pounce",
+  "title": "Pounce",
+  "description": "Trigger Pounce's keyboard-driven click, scroll, grid, window and menu modes",
+  "icon": "icon.png",
+  "author": "jaeaeich",
+  "categories": ["Productivity", "System"],
+  "license": "MIT",
+  "platforms": ["macOS"],
+  "commands": [
+    { "name": "click", "title": "Click", "subtitle": "Pounce", "description": "Show hint labels to click any element", "mode": "no-view" },
+    { "name": "scroll", "title": "Scroll", "subtitle": "Pounce", "description": "Pick a scroll area and scroll with the keyboard", "mode": "no-view" },
+    { "name": "grid", "title": "Grid", "subtitle": "Pounce", "description": "Narrow down a screen grid to click anywhere", "mode": "no-view" },
+    { "name": "windows", "title": "Windows", "subtitle": "Pounce", "description": "Switch windows by label", "mode": "no-view" },
+    { "name": "menu", "title": "Search Menu", "subtitle": "Pounce", "description": "Search the frontmost app's menu bar", "mode": "no-view" },
+    { "name": "text", "title": "Text", "subtitle": "Pounce", "description": "Click text found on screen (OCR)", "mode": "no-view" },
+    { "name": "mouse", "title": "Mouse", "subtitle": "Pounce", "description": "Move the pointer with the keyboard", "mode": "no-view" },
+    { "name": "repeat", "title": "Repeat Last Action", "subtitle": "Pounce", "description": "Repeat the last Pounce action", "mode": "no-view" },
+    { "name": "pause", "title": "Pause Shortcuts", "subtitle": "Pounce", "description": "Pause Pounce's global shortcuts", "mode": "no-view" },
+    { "name": "resume", "title": "Resume Shortcuts", "subtitle": "Pounce", "description": "Resume Pounce's global shortcuts", "mode": "no-view" }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.104.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.0.4",
+    "@types/node": "22.13.10",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
