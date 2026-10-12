@@ -1,0 +1,32 @@
+# Conventional commits on main -> release PR (version.txt + CHANGELOG.md). Merging it tags vX.Y.Z,
+# creates the GitHub release and then calls release.yml directly (tags pushed with GITHUB_TOKEN
+# don't trigger other workflows).
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+
+  release:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit

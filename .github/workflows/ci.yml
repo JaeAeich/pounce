@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Toolchain
+        run: |
+          # Liquid Glass APIs need the macOS 26 SDK (Xcode 26).
+          x=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$x" ] || { echo "Xcode 26 not on this runner image; try runs-on: macos-26"; ls -d /Applications/Xcode*; exit 1; }
+          sudo xcode-select -s "$x"
+          swift --version
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-${{ hashFiles('Sources/**', 'Tests/**') }}
+          restore-keys: spm-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-
+
+      - name: Lint
+        run: swift format lint --strict -r Sources Tests Package.swift
+
+      - name: Build
+        run: swift build
+
+      - name: Unit tests
+        run: scripts/test.sh --unit
+
+      # Hosted runners have a WindowServer session but no Accessibility grant for our binary,
+      # so the self-test skips the AX/event-tap checks; run it for signal, don't gate on it.
+      - name: Self-test (informational)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          "$(swift build --show-bin-path)/Pounce" selftest
+
+  package:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Toolchain
+        run: |
+          # Liquid Glass APIs need the macOS 26 SDK (Xcode 26).
+          x=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$x" ] || { echo "Xcode 26 not on this runner image; try runs-on: macos-26"; ls -d /Applications/Xcode*; exit 1; }
+          sudo xcode-select -s "$x"
+      - name: Package (ad-hoc signed)
+        run: IDENTITY=- scripts/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pounce-${{ github.sha }}
+          path: dist/*
+          retention-days: 7

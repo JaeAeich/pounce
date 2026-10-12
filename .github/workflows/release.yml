@@ -1,0 +1,121 @@
+# Build, sign (Developer ID), notarize, upload to the GitHub release, bump the Homebrew tap.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   MACOS_CERTIFICATE_P12        base64 .p12 (cert + private key): a "Developer ID Application" identity, or
+#                                the self-signed "Pounce Local Signing" one (scripts/signing-setup.sh --export).
+#                                Self-signed builds aren't notarized, but keep one identity so users'
+#                                Accessibility grant survives updates.
+#   MACOS_CERTIFICATE_PASSWORD   password of that .p12
+#   ASC_KEY_ID                   App Store Connect API key id      (notarization)
+#   ASC_ISSUER_ID                App Store Connect issuer id       (notarization)
+#   ASC_KEY_P8                   base64 of the AuthKey_<id>.p8 file (notarization)
+#   HOMEBREW_TAP_TOKEN           fine-grained PAT with contents:write on jaeaeich/homebrew-tap
+# Without the certificate secrets the build is ad-hoc signed and not notarized (still uploaded).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Toolchain
+        run: |
+          # Liquid Glass APIs need the macOS 26 SDK (Xcode 26).
+          x=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$x" ] || { echo "Xcode 26 not on this runner image; try runs-on: macos-26"; ls -d /Applications/Xcode*; exit 1; }
+          sudo xcode-select -s "$x"
+
+      - name: Import signing certificate
+        env:
+          P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "$P12" ]; then echo "No certificate secret: ad-hoc signing"; echo "IDENTITY=-" >> "$GITHUB_ENV"; exit 0; fi
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          kcpw=$(openssl rand -hex 16)
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kcpw" "$kc"
+          security set-keychain-settings -lut 3600 "$kc"
+          security unlock-keychain -p "$kcpw" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kcpw" "$kc" >/dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          # Developer ID if present, else the self-signed identity (not "valid" to -v, hence no -v).
+          id=$(security find-identity -v -p codesigning "$kc" | awk -F'"' '/Developer ID Application/ {print $2; exit}')
+          [ -n "$id" ] || id=$(security find-identity -p codesigning "$kc" | awk -F'"' 'NF > 1 {print $2; exit}')
+          [ -n "$id" ] || { echo "no code-signing identity in the .p12"; exit 1; }
+          echo "IDENTITY=$id" >> "$GITHUB_ENV"
+          echo "KEYCHAIN=$kc" >> "$GITHUB_ENV"
+
+      - name: Notarization key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          if [ -z "$ASC_KEY_P8" ] || [ "$IDENTITY" = "-" ]; then echo "Not notarizing"; exit 0; fi
+          echo "$ASC_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          {
+            echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8"
+            echo "ASC_KEY_ID=$ASC_KEY_ID"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Package
+        run: VERSION="${TAG#v}" scripts/package.sh
+
+      - name: Upload to GitHub release
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          gh release upload "$TAG" dist/Pounce-*.zip dist/Pounce-*.dmg dist/SHA256SUMS --clobber
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then echo "No HOMEBREW_TAP_TOKEN: skipping tap update"; exit 0; fi
+          version="${TAG#v}"
+          sha=$(shasum -a 256 "dist/Pounce-$version.zip" | cut -d' ' -f1)
+          git clone --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/jaeaeich/homebrew-tap.git" "$RUNNER_TEMP/tap"
+          mkdir -p "$RUNNER_TEMP/tap/Casks"
+          sed -e "s/^  version \".*\"/  version \"$version\"/" -e "s/^  sha256 \".*\"/  sha256 \"$sha\"/" \
+            packaging/homebrew/pounce.rb > "$RUNNER_TEMP/tap/Casks/pounce.rb"
+          cd "$RUNNER_TEMP/tap"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/pounce.rb
+          git diff --cached --quiet && { echo "tap already up to date"; exit 0; }
+          git commit -m "pounce $version"
+          git push origin HEAD
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          [ -n "${KEYCHAIN:-}" ] && security delete-keychain "$KEYCHAIN" || true
+          rm -f "$RUNNER_TEMP/AuthKey.p8"
