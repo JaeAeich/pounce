@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for Pounce. Intentionally empty:
+  - no App Sandbox (Accessibility/event taps need an unsandboxed process)
+  - no Apple Events sending, no JIT, no unsigned library loading
+  Accessibility and Screen Recording are TCC grants, not entitlements.
+-->
+<plist version="1.0">
+<dict>
+</dict>
+</plist>
