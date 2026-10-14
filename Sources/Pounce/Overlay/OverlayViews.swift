@@ -86,7 +86,8 @@ extension View {
         if #available(macOS 26, *), OverlayGlass.enabled {
             self.glassEffect(.regular, in: shape)
         } else {
-            self.background(.regularMaterial, in: shape)
+            // Thick material: the HUD must stay readable over white windows (macOS 14/15, captures).
+            self.background(.thickMaterial, in: shape)
                 .overlay(shape.stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.18), radius: 14, y: 4)
         }
