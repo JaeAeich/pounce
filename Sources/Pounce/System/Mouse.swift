@@ -18,7 +18,9 @@ enum Mouse {
         guard let e = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: p, mouseButton: button) else { return }
         if button.rawValue >= 2 { e.setIntegerValueField(.mouseEventButtonNumber, value: Int64(button.rawValue)) }
         if clickState > 0 { e.setIntegerValueField(.mouseEventClickState, value: clickState) }
-        if !flags.isEmpty { e.flags = flags }
+        // Always set flags: an event from the HID-state source otherwise inherits the modifiers the user
+        // is physically holding (⇧ from ⇧+label), turning a click into ⇧-click (new window in browsers).
+        e.flags = flags
         e.setIntegerValueField(.eventSourceUserData, value: EventTap.syntheticMarker)
         e.post(tap: .cghidEventTap)
     }
@@ -81,6 +83,8 @@ enum Mouse {
                 wheel1: Int32(-dy.rounded()), wheel2: Int32(-dx.rounded()), wheel3: 0)
         else { return }
         if let p = point { e.location = p }
+        // Held ⇧ (fast scroll) must not leak in: apps read ⇧+wheel as horizontal scrolling.
+        e.flags = []
         e.setIntegerValueField(.eventSourceUserData, value: EventTap.syntheticMarker)
         e.post(tap: .cghidEventTap)
     }
