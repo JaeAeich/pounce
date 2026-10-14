@@ -6,6 +6,30 @@ All notable changes to this project are documented here. The format follows
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## 1.0.0 (2026-10-14)
+
+
+### Features
+
+* add homebrew cask and raycast extension ([8436835](https://github.com/JaeAeich/pounce/commit/843683559c6d4e26cbf296a5eeaa0e7add914729))
+* **app:** add controller, scan cache, cli and doctor ([53838c0](https://github.com/JaeAeich/pounce/commit/53838c075af4be8576979517fb18e12e832fb43b))
+* **ax:** add accessibility scanner and browser support ([a9e375e](https://github.com/JaeAeich/pounce/commit/a9e375e22f84ca83114856e12047f4cd2c022274))
+* **core:** add fuzzy matching and label generation ([15158bc](https://github.com/JaeAeich/pounce/commit/15158bc28507cd545a0f4946fabab9c908faf2f7))
+* **core:** add hint, scroll, grid and mouse sessions ([cba2766](https://github.com/JaeAeich/pounce/commit/cba27663c23ff8f5da48f473ce08a7533e0369f7))
+* **core:** add key chords, key tables and input mapping ([2ff6a7f](https://github.com/JaeAeich/pounce/commit/2ff6a7f2ec2b8c631201964d59620de348289587))
+* **core:** add toml config with presets and importers ([fc14c13](https://github.com/JaeAeich/pounce/commit/fc14c1331a0580464523f05b8849a01f2b5e2e02))
+* **modes:** add click, scroll, grid, mouse, windows, menu and text modes ([4247d3f](https://github.com/JaeAeich/pounce/commit/4247d3fa7672b8641c1d44e5f65a6d9d3f040059))
+* **overlay:** add core animation hint overlay ([82b6d49](https://github.com/JaeAeich/pounce/commit/82b6d49629f304fe8d46361c918453352318f064))
+* **system:** add event tap, hotkeys and input synthesis ([e0be773](https://github.com/JaeAeich/pounce/commit/e0be773a30aff021cf395f9a618adad640bbf7d8))
+* **ui:** add settings, onboarding, menu bar and cheat sheet ([305e71e](https://github.com/JaeAeich/pounce/commit/305e71e9644fe49f5b47f59cc2a1ee73eb97b5d9))
+
+
+### Bug Fixes
+
+* **mouse:** don't leak held modifiers into clicks and scrolls ([93991b5](https://github.com/JaeAeich/pounce/commit/93991b52129f6acda368d47668471151c2c1a682))
+* **overlay:** keep the hud readable over light windows ([3d762e6](https://github.com/JaeAeich/pounce/commit/3d762e613ae22f25ee9e6530fb1c6615946137c5))
+* **test:** handle empty flag list on bash 3.2 ([0a2e4be](https://github.com/JaeAeich/pounce/commit/0a2e4beb271b60c04a3b171d9e41b3149c3e4cb5))
+
 ## 0.1.0 (unreleased)
 
 ### Features
