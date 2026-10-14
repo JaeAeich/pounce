@@ -15,7 +15,7 @@ if [[ "$(xcode-select -p)" == "$clt" ]]; then
 fi
 
 echo "==> Unit tests"
-swift test --disable-xctest "${flags[@]}" 2>&1 | grep -E "^(✔|✘|􁁛|􀢄)|Test run|error:" | tail -n 25
+swift test --disable-xctest ${flags[@]+"${flags[@]}"} 2>&1 | grep -E "^(✔|✘|􁁛|􀢄)|Test run|error:" | tail -n 25
 
 # --unit: skip the self-test (it needs a GUI session + Accessibility, e.g. on CI runners).
 [[ "${1:-}" == "--unit" ]] && exit 0
