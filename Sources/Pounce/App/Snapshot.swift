@@ -138,7 +138,8 @@ func runSnapshot(_ dir: String) {
     OverlayGlass.enabled = false
     let out = URL(fileURLWithPath: dir, isDirectory: true)
     try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-    let size = CGSize(width: 1000, height: 680)
+    // Taller than the mock window so the HUD has a free bottom band, as on a real screen.
+    let size = CGSize(width: 1000, height: 740)
     let screen = Rect(x: 0, y: 0, width: size.width, height: size.height)
     var written: [String] = []
 
@@ -192,6 +193,7 @@ func runSnapshot(_ dir: String) {
     let all = HintSession(items: items, alphabet: "asdfghjkl")
     var search = HintSession(items: items, alphabet: "asdfghjkl")
     for c in "pla" { _ = search.handle(.char(c)) }
+    func matches(_ n: Int) -> String { n == 1 ? "1 match" : "\(n) matches" }
     let hud = { (q: String, d: String) in
         HUDState(mode: .hint, query: q, detail: d, keys: ["type to search", "⇧+label jump", "⏎ click", "? tutor", "esc"])
     }
@@ -202,15 +204,37 @@ func runSnapshot(_ dir: String) {
             overlay(
                 { m in
                     m.scene = hints(all)
-                    m.hud = hud("", "\(all.visible.count) matches")
+                    m.hud = hud("", matches(all.visible.count))
                 }, theme: theme))
     }
     save(
         "hints-search",
         overlay({ m in
             m.scene = hints(search, tutor: true)
-            m.hud = hud("pla", "\(search.visible.count) matches")
+            m.hud = hud("pla", matches(search.visible.count))
         }))
+    // README demo: frames of a real click-mode session typing "shu" (Shuffle), assembled into a GIF by
+    // scripts/demo-gif.sh.
+    do {
+        var demo = HintSession(items: items, alphabet: "asdfghjkl")
+        var frames: [(String, OverlayScene, HUDState?)] = [
+            ("00", .none, nil), ("01", hints(demo), hud("", matches(demo.visible.count))),
+        ]
+        for (i, c) in "shu".enumerated() {
+            _ = demo.handle(.char(c))
+            frames.append(("0\(i + 2)", hints(demo), hud(String("shu".prefix(i + 1)), matches(demo.visible.count))))
+        }
+        frames.append(("05", .none, nil))
+        try? FileManager.default.createDirectory(at: out.appendingPathComponent("demo"), withIntermediateDirectories: true)
+        for (name, scene, h) in frames {
+            save(
+                "demo/frame-\(name)",
+                overlay({ m in
+                    m.scene = scene
+                    m.hud = h
+                }))
+        }
+    }
     save(
         "scroll",
         overlay({ m in
